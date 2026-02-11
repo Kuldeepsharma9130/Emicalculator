@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Loan Pro - Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --hdfc-blue: #004c8f;
+            --hdfc-red: #ed232a;
+            --success-green: #10b981;
+            --bg-light: #f8fafc;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-light);
+            margin: 0;
+            padding: 20px;
+            color: #1e293b;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .calculator-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+        }
+
+        @media (max-width: 850px) {
+            .calculator-card { grid-template-columns: 1fr; }
+        }
+
+        h2 { color: var(--hdfc-blue); margin-top: 0; }
+
+        .input-group { margin-bottom: 1.2rem; }
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .val-box {
+            border: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 6px;
+            color: var(--hdfc-blue);
+            width: 110px;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        input[type="range"] { width: 100%; accent-color: var(--hdfc-blue); cursor: pointer; }
+
+        .toggle-container {
+            display: flex;
+            background: #eee;
+            padding: 3px;
+            border-radius: 8px;
+            width: fit-content;
+        }
+        .toggle-btn {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .toggle-btn.active { background: var(--hdfc-blue); color: white; }
+
+        /* Results */
+        .results-pane { display: flex; flex-direction: column; align-items: center; }
+        .emi-amt { font-size: 2.2rem; font-weight: 800; color: var(--hdfc-blue); margin-bottom: 5px; }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            margin-top: 1.5rem;
+        }
+        .sum-card {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            border-left: 4px solid var(--hdfc-blue);
+        }
+        .sum-card b { display: block; font-size: 1rem; margin-top: 4px; }
+        .highlight-card { border-left-color: var(--success-green); background: #f0fdf4; }
+
+        /* Table */
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2rem;
+        }
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: var(--hdfc-blue); color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid var(--border-color); }
+        tr:hover { background: #f8fafc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="calculator-card">
+        <div>
+            <h2>Loan Details</h2>
+            
+            <div class="input-group">
+                <div class="label-row"><span>Loan Amount</span><input type="number" id="amtInp" class="val-box"></div>
+                <input type="range" id="amtRange" min="50000" max="10000000" step="50000">
+            </div>
+
+            <div class="input-group">
+                <div class="label-row"><span>Interest Rate (% PA)</span><input type="number" id="rateInp" class="val-box"></div>
+                <input type="range" id="rateRange" min="5" max="25" step="0.1">
+            </div>
+
+            <div class="input-group">
+                <div class="label-row">
+                    <span id="tenureLabel">Duration (Years)</span>
+                    <div class="toggle-container">
+                        <button id="yrBtn" class="toggle-btn active">Year</button>
+                        <button id="moBtn" class="toggle-btn">Months</button>
+                    </div>
+                </div>
+                <div class="label-row" style="justify-content: flex-end;">
+                    <input type="number" id="tenureInp" class="val-box">
+                </div>
+                <input type="range" id="tenureRange" min="1" max="30" step="1">
+            </div>
+
+            <div style="padding: 15px; background: #f0f7ff; border-radius: 12px; border: 1px dashed var(--hdfc-blue);">
+                <div class="label-row" style="color: var(--hdfc-blue);">
+                    <span>Extra Monthly Payment</span>
+                    <input type="number" id="prepayInp" class="val-box" value="0">
+                </div>
+                <input type="range" id="prepayRange" min="0" max="50000" step="500" value="0">
+                <p style="font-size: 0.7rem; margin: 5px 0 0; color: #64748b;">Speeds up loan repayment and saves interest.</p>
+            </div>
+        </div>
+
+        <div class="results-pane">
+            <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">Monthly EMI</span>
+            <span class="emi-amt" id="emiVal">₹ 0</span>
+            
+            <div style="width: 220px; margin: 10px 0;"><canvas id="myChart"></canvas></div>
+
+            <div class="summary-grid">
+                <div class="sum-card">Principal Amount <b id="sumPri">₹ 0</b></div>
+                <div class="sum-card">Total Interest <b id="sumInt" style="color: var(--hdfc-red);">₹ 0</b></div>
+                <div class="sum-card" style="border-left-color: #1e293b;">Total Amount Payable <b id="sumTotal">₹ 0</b></div>
+                <div class="sum-card highlight-card">Interest Savings <b id="sumSaved" style="color: var(--success-green);">₹ 0</b></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-header">
+        <h3 style="color: var(--hdfc-blue);">Amortization Schedule</h3>
+        <span id="tenureShortened" style="font-size: 0.85rem; color: var(--success-green); font-weight: 700;"></span>
+    </div>
+
+    <div class="table-container">
+        <table id="amortTable">
+            <thead>
+                <tr>
+                    <th>Month</th>
+                    <th>Principal Paid</th>
+                    <th>Interest Paid</th>
+                    <th>Extra Paid</th>
+                    <th>Remaining Balance</th>
+                </tr>
+            </thead>
+            <tbody id="amortBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let isYearly = true;
+    let myChart;
+
+    function initChart() {
+        const ctx = document.getElementById('myChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Principal', 'Total Interest'],
+                datasets: [{ data: [1, 1], backgroundColor: ['#004c8f', '#ed232a'], borderWidth: 0 }]
+            },
+            options: { plugins: { legend: { position: 'bottom' } }, cutout: '70%' }
+        });
+    }
+
+    function update() {
+        const P = parseFloat(document.getElementById('amtInp').value) || 0;
+        const annualRate = parseFloat(document.getElementById('rateInp').value) || 0;
+        const r = annualRate / 12 / 100;
+        const tenureVal = parseFloat(document.getElementById('tenureInp').value) || 0;
+        const n = isYearly ? tenureVal * 12 : tenureVal;
+        const extra = parseFloat(document.getElementById('prepayInp').value) || 0;
+
+        let emi = 0;
+        if (P > 0 && r > 0 && n > 0) {
+            emi = (P * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
+        }
+
+        const standardTotalInterest = (emi * n) - P;
+
+        let tableHtml = '';
+        let balance = P;
+        let totalIntPaid = 0;
+        let actualMonths = 0;
+
+        for(let i = 1; i <= n; i++) {
+            if (balance <= 0.01) break;
+            
+            let mInt = balance * r;
+            let mPri = emi - mInt;
+            
+            let currentExtra = extra;
+            if (balance < (mPri + extra)) {
+                mPri = balance;
+                currentExtra = 0;
+                balance = 0;
+            } else {
+                balance = balance - mPri - extra;
+            }
+
+            totalIntPaid += mInt;
+            actualMonths = i;
+
+            if (i <= 12 || i % 12 === 0 || balance <= 0) {
+                tableHtml += `<tr>
+                    <td>${i}</td>
+                    <td>₹${Math.round(mPri).toLocaleString('en-IN')}</td>
+                    <td>₹${Math.round(mInt).toLocaleString('en-IN')}</td>
+                    <td>₹${Math.round(currentExtra).toLocaleString('en-IN')}</td>
+                    <td>₹${Math.max(0, Math.round(balance)).toLocaleString('en-IN')}</td>
+                </tr>`;
+            }
+        }
+
+        const totalPayable = P + totalIntPaid;
+        const savings = standardTotalInterest - totalIntPaid;
+
+        document.getElementById('emiVal').innerText = '₹' + Math.round(emi).toLocaleString('en-IN');
+        document.getElementById('sumPri').innerText = '₹' + P.toLocaleString('en-IN');
+        document.getElementById('sumInt').innerText = '₹' + Math.round(totalIntPaid).toLocaleString('en-IN');
+        document.getElementById('sumTotal').innerText = '₹' + Math.round(totalPayable).toLocaleString('en-IN');
+        document.getElementById('sumSaved').innerText = '₹' + Math.max(0, Math.round(savings)).toLocaleString('en-IN');
+        
+        const monthsSaved = n - actualMonths;
+        document.getElementById('tenureShortened').innerText = monthsSaved > 0 ? `🎉 Extra payments save you ${monthsSaved} months!` : '';
+
+        document.getElementById('amortBody').innerHTML = tableHtml;
+
+        myChart.data.datasets[0].data = [P, totalIntPaid];
+        myChart.update();
+    }
+
+    document.getElementById('yrBtn').onclick = () => {
+        isYearly = true;
+        document.getElementById('yrBtn').classList.add('active');
+        document.getElementById('moBtn').classList.remove('active');
+        document.getElementById('tenureLabel').innerText = "Duration (Years)";
+        document.getElementById('tenureRange').max = 30;
+        update();
+    };
+    document.getElementById('moBtn').onclick = () => {
+        isYearly = false;
+        document.getElementById('moBtn').classList.add('active');
+        document.getElementById('yrBtn').classList.remove('active');
+        document.getElementById('tenureLabel').innerText = "Duration (Months)";
+        document.getElementById('tenureRange').max = 360;
+        update();
+    };
+
+    const sync = (s, i) => {
+        const slider = document.getElementById(s);
+        const input = document.getElementById(i);
+        slider.oninput = (e) => { input.value = e.target.value; update(); };
+        input.oninput = (e) => { slider.value = e.target.value; update(); };
+    };
+
+    document.getElementById('amtInp').value = 1000000;
+    document.getElementById('amtRange').value = 1000000;
+    document.getElementById('rateInp').value = 10.5;
+    document.getElementById('rateRange').value = 10.5;
+    document.getElementById('tenureInp').value = 5;
+    document.getElementById('tenureRange').value = 5;
+
+    sync('amtRange', 'amtInp');
+    sync('rateRange', 'rateInp');
+    sync('tenureRange', 'tenureInp');
+    sync('prepayRange', 'prepayInp');
+
+    initChart();
+    update();
+</script>
+</body>
+</html>
